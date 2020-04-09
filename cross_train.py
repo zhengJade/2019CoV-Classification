@@ -121,38 +121,39 @@ def main():
     model_list = []
     for fold in range(opt.cross_fold):
         model = ModelTrained(opt, 'model_path'+fold)
-        model._reset_params
+        #model._reset_params
         model_list.append(model)
 
     n_correct, n_total = 0, 0
     t_targets_all, t_outputs_all = None, None
     self.model.eval()
-        with torch.no_grad():
-            logger.info('>' * 100)
-            for batch, sample_batched in enumerate(test_data_loader):
-                if batch % 100 == 0:
-                    logger.info('batch: {}'.format(batch))
-                inputs = [sample_batched[col].to(self.opt.device) for col in self.opt.inputs_cols]
-                targets = sample_batched['polarity'].to(self.opt.device)
-                result_list = []
-                for model in range(model_list):
-                    result_list.append(model(inputs))
+    with torch.no_grad():
+        logger.info('>' * 100)
+        for batch, sample_batched in enumerate(test_data_loader):
+            if batch % 100 == 0:
+                logger.info('batch: {}'.format(batch))
+            inputs = [sample_batched[col].to(self.opt.device) for col in self.opt.inputs_cols]
+            targets = sample_batched['polarity'].to(self.opt.device)
+            result_list = []
+            for model in range(model_list):
+                result_list.append(model(inputs))
                 
-                outputs = sum(result_list)
+            outputs = sum(result_list)
 
-                n_correct += (torch.argmax(outputs, -1) == targets).sum().item()
-                n_total += len(t_outputs)
-                acc = n_correct / n_total
-                logger.info('acc: {:.4f}'.format(train_acc))
+            n_correct += (torch.argmax(outputs, -1) == targets).sum().item()
+            n_total += len(t_outputs)
+            acc = n_correct / n_total
+            logger.info('acc: {:.4f}'.format(train_acc))
 
-                if targets_all is None:
-                    targets_all = targets
-                    outputs_all = outputs
-                else:
-                    targets_all = torch.cat((targets_all, targets), dim=0)
-                    outputs_all = torch.cat((outputs_all, outputs), dim=0)
+            if targets_all is None:
+                targets_all = targets
+                outputs_all = outputs
+            else:
+                targets_all = torch.cat((targets_all, targets), dim=0)
+                outputs_all = torch.cat((outputs_all, outputs), dim=0)
 
         acc = n_correct / n_total
         f1 = metrics.f1_score(targets_all.cpu(), torch.argmax(outputs_all, -1).cpu(), labels=[0, 1, 2], average='macro')
+        logger.info('acc: {:.4f} f1: {:.4f}'.format(train_acc, f1))
 
 
