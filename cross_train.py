@@ -100,7 +100,7 @@ def main():
     dataset_files = {
         'weibo':{
             'train': './datasets/2019Cov/CoV_train.csv',
-            'test': './datasets/2019Cov/CoV_test.csv'
+            'test': './datasets/2019Cov/CoVTest.csv'
         }
     }
 
@@ -120,7 +120,7 @@ def main():
     
     model_list = []
     for fold in range(opt.cross_fold):
-        model = ModelTrained(opt, 'model_path'+fold)
+        model = ModelTrained(opt, './state_dict/model'+fold)
         #model._reset_params
         model_list.append(model)
 
