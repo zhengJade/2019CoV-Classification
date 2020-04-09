@@ -162,7 +162,7 @@ class Instructor:
 
     def run(self):
         # Loss and Optimizer
-        criterion = focal_loss(alpha=0.25, gamma=2, num_classes=3)
+        criterion = focal_loss(alpha=[3, 1, 2], gamma=2, num_classes=3)
         _params = filter(lambda p: p.requires_grad, self.model.parameters())
         optimizer = self.opt.optimizer(_params, lr=self.opt.learning_rate, weight_decay=self.opt.l2reg)
 
