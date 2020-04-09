@@ -51,6 +51,6 @@ class SL_BERT(nn.Module):
         mean_pool = self.linear_single(bert_spc_out)
         self_attention_out = self.bert_SA(mean_pool)
         pooled_out = self.bert_pooler(self_attention_out)
-        dense_out = self.dense(self_attention_out)
+        dense_out = self.dense(pooled_out)
 
         return dense_out

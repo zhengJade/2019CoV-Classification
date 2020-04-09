@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # file: train.py
-# author: jade <zhengjade@qq.com>
-# Copyright (C) 2020. All Rights Reserved.
+# author: songyouwei <youwei0314@gmail.com>
+# Copyright (C) 2018. All Rights Reserved.
 import logging
 import argparse
 import math
@@ -19,10 +19,9 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 
-from data_utils import build_tokenizer, build_embedding_matrix, Tokenizer4Bert, ABSADataset
-from data_utils import CovData
+from data_utils import build_tokenizer, build_embedding_matrix, Tokenizer4Bert, ABSADataset, CovData 
 
-from models import SL_BERT, BERT_SPC
+from models import BERT_SPC, SL_BERT
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -163,7 +162,6 @@ class Instructor:
 
     def run(self):
         # Loss and Optimizer
-        #criterion = CrossEntropyLoss()
         criterion = focal_loss(alpha=0.25, gamma=2, num_classes=3)
         _params = filter(lambda p: p.requires_grad, self.model.parameters())
         optimizer = self.opt.optimizer(_params, lr=self.opt.learning_rate, weight_decay=self.opt.l2reg)
@@ -192,7 +190,7 @@ def main():
     parser.add_argument('--l2reg', default=0.01, type=float)
     parser.add_argument('--num_epoch', default=5, type=int, help='try larger number for non-BERT models')
     parser.add_argument('--batch_size', default=16, type=int, help='try 16, 32, 64 for BERT models')
-    parser.add_argument('--log_step', default=10, type=int)
+    parser.add_argument('--log_step', default=5, type=int)
     parser.add_argument('--embed_dim', default=300, type=int)
     parser.add_argument('--hidden_dim', default=300, type=int)
     parser.add_argument('--bert_dim', default=768, type=int)
@@ -219,16 +217,36 @@ def main():
     model_classes = {
         'bert_spc': BERT_SPC,
         'sl_bert': SL_BERT,
+        # default hyper-parameters for LCF-BERT model is as follws:
+        # lr: 2e-5
+        # l2: 1e-5
+        # batch size: 16
+        # num epochs: 5
     }
     dataset_files = {
         'weibo':{
             'train': './datasets/2019Cov/CoV_train.csv',
             'test': './datasets/2019Cov/CoV_test.csv'
-        }
+        },
+        'weibo0':{
+               'train': './datasets/2019CoV/CoVTrain0.csv',
+               'test': './datasets/2019CoV/CoVTest.csv'
+       },
+       'weibo1':{
+               'train': './datasets/2019CoV/CoVTrain1.csv',
+               'test': './datasets/2019CoV/CoVTest.csv'
+       },
+       'weibo2':{
+               'train': './datasets/2019CoV/CoVTrain2.csv',
+               'test': './datasets/2019CoV/CoVTest.csv'
+       },
+       'weibo3':{
+               'train': './datasets/2019CoV/CoVTrain3.csv',
+               'test': './datasets/2019CoV/CoVTest.csv'
+       }
     }
     input_colses = {
         'bert_spc': ['text_bert_indices', 'bert_segments_ids'],
-        'lsat_bert': ['text_bert_indices', 'bert_segments_ids'],
         'sl_bert': ['text_bert_indices', 'bert_segments_ids'],
     }
     #变量初始化方式
