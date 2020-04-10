@@ -80,7 +80,6 @@ def main():
     parser.add_argument('--SRD', default=3, type=int, help='semantic-relative-distance, see the paper of LCF-BERT model')
     parser.add_argument('--cross_fold', default=4, type=int, help='交叉验证次数')
     parser.add_argument('model_path', default='model', type=str, help='save model name')
-    parser.
     opt = parser.parse_args()
 
     model_classes = {
@@ -166,6 +165,6 @@ def main():
 
         acc = n_correct / n_total
         f1 = metrics.f1_score(targets_all.cpu(), torch.argmax(outputs_all, -1).cpu(), labels=[0, 1, 2], average='macro')
-        logger.info('acc: {:.4f} f1: {:.4f}'.format(train, f1))
+        logger.info('acc: {:.4f} f1: {:.4f}'.format(acc, f1))
 if __name__ == '__main__':
   main()
