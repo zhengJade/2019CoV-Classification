@@ -29,13 +29,14 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler(sys.stdout))
 
-class ModelTrained(object):
+class ModelTrained(nn.Module):
     def __init__(self, opt, model_path: str):
+        super(ModelTrained, self).__init__()
         self.opt = opt
         self.model_path = model_path
         bert = BertModel.from_pretrained(opt.pretrained_bert_name)
         self.model = opt.model_class(bert, opt).to(opt.device)
-        self.model.load_state_dict(torch.load(best_model_path))
+        self.model.load_state_dict(torch.load(model_path))
 
     def output(self, inputs):
         return self.model(inputs)
@@ -96,11 +97,20 @@ def main():
         'xavier_normal_': torch.nn.init.xavier_normal,
         'orthogonal_': torch.nn.init.orthogonal_,
     }
+    optimizers = {
+        'adadelta': torch.optim.Adadelta,  # default lr=1.0
+        'adagrad': torch.optim.Adagrad,  # default lr=0.01
+        'adam': torch.optim.Adam,  # default lr=0.001
+        'adamax': torch.optim.Adamax,  # default lr=0.002
+        'asgd': torch.optim.ASGD,  # default lr=0.01
+        'rmsprop': torch.optim.RMSprop,  # default lr=0.01
+        'sgd': torch.optim.SGD,
+    }
 
     dataset_files = {
         'weibo':{
-            'train': './datasets/2019Cov/CoV_train.csv',
-            'test': './datasets/2019Cov/CoVTest.csv'
+            'train': './datasets/2019CoV/CoV_train.csv',
+            'test': './datasets/2019CoV/CoVTest.csv'
         }
     }
 
@@ -114,36 +124,36 @@ def main():
     opt.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') \
         if opt.device is None else torch.device(opt.device)
     opt.data_file = dataset_files[opt.dataset]
-
+    tokenizer = Tokenizer4Bert(opt.max_seq_len, opt.pretrained_bert_name)
     testset = CovData(opt.dataset_file['test'], tokenizer)
-    test_data_loader = DataLoader(testset, batch_size=self.opt.batch_size, shuffle=False)
+    test_data_loader = DataLoader(testset, batch_size=opt.batch_size, shuffle=False)
     
     model_list = []
     for fold in range(opt.cross_fold):
-        model = ModelTrained(opt, './state_dict/model'+fold)
+        model = ModelTrained(opt, './state_dict/model' +'{}'.format(fold))
         #model._reset_params
         model_list.append(model)
 
     n_correct, n_total = 0, 0
-    t_targets_all, t_outputs_all = None, None
-    self.model.eval()
+    targets_all, outputs_all = None, None
     with torch.no_grad():
         logger.info('>' * 100)
         for batch, sample_batched in enumerate(test_data_loader):
             if batch % 100 == 0:
                 logger.info('batch: {}'.format(batch))
-            inputs = [sample_batched[col].to(self.opt.device) for col in self.opt.inputs_cols]
-            targets = sample_batched['polarity'].to(self.opt.device)
+            inputs = [sample_batched[col].to(opt.device) for col in opt.inputs_cols]
+            targets = sample_batched['polarity'].to(opt.device)
             result_list = []
-            for model in range(model_list):
-                result_list.append(model(inputs))
+            for model in model_list:
+                result_list.append(model.output(inputs))
                 
             outputs = sum(result_list)
 
             n_correct += (torch.argmax(outputs, -1) == targets).sum().item()
-            n_total += len(t_outputs)
+            n_total += len(outputs)
             acc = n_correct / n_total
-            logger.info('acc: {:.4f}'.format(train_acc))
+            if batch % 10 == 0:
+                logger.info('acc: {:.4f}'.format(acc))
 
             if targets_all is None:
                 targets_all = targets
@@ -154,6 +164,6 @@ def main():
 
         acc = n_correct / n_total
         f1 = metrics.f1_score(targets_all.cpu(), torch.argmax(outputs_all, -1).cpu(), labels=[0, 1, 2], average='macro')
-        logger.info('acc: {:.4f} f1: {:.4f}'.format(train_acc, f1))
-
-
+        logger.info('acc: {:.4f} f1: {:.4f}'.format(train, f1))
+if __name__ == '__main__':
+  main()
