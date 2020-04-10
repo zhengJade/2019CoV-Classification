@@ -127,7 +127,7 @@ class Instructor:
                 max_val_acc = val_acc
                 if not os.path.exists('state_dict'):
                     os.mkdir('state_dict')
-                path = 'state_dict/{0}_{1}_val_acc{2}'.format(self.opt.model_name, self.opt.dataset, round(val_acc, 4))
+                path = 'state_dict/{0}_{1}'.format(self.opt.model_path, self.opt.model_name)
                 torch.save(self.model.state_dict(), path)
                 logger.info('>> saved: {}'.format(path))
             if val_f1 > max_val_f1:
@@ -162,7 +162,7 @@ class Instructor:
 
     def run(self):
         # Loss and Optimizer
-        criterion = focal_loss(alpha=[3, 1, 2], gamma=2, num_classes=3)
+        criterion = self.opt.loss_function()
         _params = filter(lambda p: p.requires_grad, self.model.parameters())
         optimizer = self.opt.optimizer(_params, lr=self.opt.learning_rate, weight_decay=self.opt.l2reg)
 
@@ -204,6 +204,8 @@ def main():
     # The following parameters are only valid for the lcf-bert model
     parser.add_argument('--local_context_focus', default='cdm', type=str, help='local context focus mode, cdw or cdm')
     parser.add_argument('--SRD', default=3, type=int, help='semantic-relative-distance, see the paper of LCF-BERT model')
+    parser.add_argument('--model_path', default='model', type=str, help='save model name')
+    parser.add_argument('--loss_function', default='cross_entropy_loss', type=str)
     opt = parser.parse_args()
 
     if opt.seed is not None:
@@ -264,11 +266,18 @@ def main():
         'rmsprop': torch.optim.RMSprop,  # default lr=0.01
         'sgd': torch.optim.SGD,
     }
+
+    loss_functions = {
+        'focal_loss': focal_loss,
+        'cross_entropy_loss': nn.CrossEntropyLoss
+    }
+
     opt.model_class = model_classes[opt.model_name]
     opt.dataset_file = dataset_files[opt.dataset]
     opt.inputs_cols = input_colses[opt.model_name]
     opt.initializer = initializers[opt.initializer]
     opt.optimizer = optimizers[opt.optimizer]
+    opt.loss_function = loss_functions[opt.loss_function]
     opt.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') \
         if opt.device is None else torch.device(opt.device)
 

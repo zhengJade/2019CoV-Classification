@@ -79,6 +79,8 @@ def main():
     parser.add_argument('--local_context_focus', default='cdm', type=str, help='local context focus mode, cdw or cdm')
     parser.add_argument('--SRD', default=3, type=int, help='semantic-relative-distance, see the paper of LCF-BERT model')
     parser.add_argument('--cross_fold', default=4, type=int, help='交叉验证次数')
+    parser.add_argument('model_path', default='model', type=str, help='save model name')
+    parser.
     opt = parser.parse_args()
 
     model_classes = {
@@ -130,7 +132,7 @@ def main():
     
     model_list = []
     for fold in range(opt.cross_fold):
-        model = ModelTrained(opt, './state_dict/model' +'{}'.format(fold))
+        model = ModelTrained(opt, './state_dict/{}{}'.format(opt.model_path, fold))
         #model._reset_params
         model_list.append(model)
 
