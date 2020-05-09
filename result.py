@@ -11,6 +11,7 @@ import sys
 from time import strftime, localtime
 import random
 import numpy as np
+import pickle
 
 from pytorch_transformers import BertModel
 from loss_function import focal_loss
@@ -113,11 +114,46 @@ def main():
             'train': './datasets/2019CoV/CoV_train.csv',
             'test': './datasets/2019CoV/CoVTest.csv'
         },
-        'rm':{
-            'test':'./datasets/2019CoV/rm.csv'
-        }
-    }
-
+        'rmrb':{
+            'test':'./datasets/2019CoV/rmrb.csv'
+        },
+        'qnb':{
+            'test':'./datasets/2019CoV/qnb.csv'
+        },
+        'xhsd':{
+            'test':'./datasets/2019CoV/xhsd.csv'
+        },
+        'dxy':{
+            'test':'./datasets/2019CoV/dxy.csv'
+        },
+        'cjrb':{
+            'test':'./datasets/2019CoV/cjrb.csv'
+        },
+        'ctdsb':{
+            'test':'./datasets/2019CoV/ctdsb.csv'
+        },
+        'gzrb':{
+            'test':'./datasets/2019CoV/gzrb.csv'
+        },
+        'jmxw':{
+            'test':'./datasets/2019CoV/jmxw.csv'
+        },
+        'nfdsb':{
+            'test':'./datasets/2019CoV/nfdsb.csv' 
+        },
+        'ppxw':{
+            'test':'./datasets/2019CoV/ppxw.csv'
+        },
+        'rw':{
+            'test':'./datasets/2019CoV/rw.csv'
+        },
+        'xjb':{
+            'test':'./datasets/2019CoV/xjb.csv'
+        },
+        'zgqng':{
+            'test':'./datasets/2019CoV/zgqng.csv'
+        } 
+    } 
     log_file = '{}-{}-{}.log'.format(opt.model_name, opt.dataset, strftime("%y%m%d-%H%M", localtime()))
     logger.addHandler(logging.FileHandler(log_file))
     opt.model_class = model_classes[opt.model_name]
@@ -137,14 +173,14 @@ def main():
         model = ModelTrained(opt, './state_dict/{}{}'.format(opt.model_path, fold))
         #model._reset_params
         model_list.append(model)
-
+    result = []
     with torch.no_grad():
         logger.info('>' * 100)
         for batch, sample_batched in enumerate(test_data_loader):
-            if batch % 100 == 0:
+            if batch % 20 == 0:
                 logger.info('batch: {}'.format(batch))
             inputs = [sample_batched[col].to(opt.device) for col in opt.inputs_cols]
-            time = sample_batched['time'].to(opt.device)
+            time_list = sample_batched['time']
             result_list = []
             for model in model_list:
                 result_list.append(model.output(inputs))
@@ -152,12 +188,15 @@ def main():
             outputs = sum(result_list)
 
             output = torch.argmax(outputs, -1)
-            
-            print(output, '\n')
-            print(time, '\n')
-            
-
-        
+            output_numpy = output.cpu().numpy()
+            output_list = output_numpy.tolist()
+            for tendency, time in zip(output_list, time_list):
+                result.append((tendency, time))
+        print(result)
+        pickle_path = './datasets/result/{}.pkl'.format(opt.dataset)
+        f = open(pickle_path, 'wb+')
+        pickle.dump(result, f)
+        f.close()
         #logger.info('acc: {:.4f} f1: {:.4f}'.format(acc, f1))
 if __name__ == '__main__':
   main()

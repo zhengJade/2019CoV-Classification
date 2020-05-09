@@ -79,7 +79,7 @@ def main():
     parser.add_argument('--local_context_focus', default='cdm', type=str, help='local context focus mode, cdw or cdm')
     parser.add_argument('--SRD', default=3, type=int, help='semantic-relative-distance, see the paper of LCF-BERT model')
     parser.add_argument('--cross_fold', default=4, type=int, help='交叉验证次数')
-    parser.add_argument('model_path', default='model', type=str, help='save model name')
+    parser.add_argument('--model_path', default='model', type=str, help='save model name')
     opt = parser.parse_args()
 
     model_classes = {
@@ -131,7 +131,7 @@ def main():
     
     model_list = []
     for fold in range(opt.cross_fold):
-        model = ModelTrained(opt, './state_dict/{}{}'.format(opt.model_path, fold))
+        model = ModelTrained(opt, './state_dict/{}{}_{}'.format(opt.model_path, fold, opt.model_name))
         #model._reset_params
         model_list.append(model)
 
@@ -149,7 +149,6 @@ def main():
                 result_list.append(model.output(inputs))
                 
             outputs = sum(result_list)
-
             n_correct += (torch.argmax(outputs, -1) == targets).sum().item()
             n_total += len(outputs)
             acc = n_correct / n_total
