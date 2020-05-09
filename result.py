@@ -11,6 +11,7 @@ import sys
 from time import strftime, localtime
 import random
 import numpy as np
+import pickle
 
 from pytorch_transformers import BertModel
 from loss_function import focal_loss
@@ -21,7 +22,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 
 from data_utils import build_tokenizer, build_embedding_matrix, Tokenizer4Bert, ABSADataset
-from data_utils import CovData
+from data_utils import CovProcess
 
 from models import SL_BERT, BERT_SPC
 
@@ -112,9 +113,47 @@ def main():
         'weibo':{
             'train': './datasets/2019CoV/CoV_train.csv',
             'test': './datasets/2019CoV/CoVTest.csv'
-        }
-    }
-
+        },
+        'rmrb':{
+            'test':'./datasets/2019CoV/rmrb.csv'
+        },
+        'qnb':{
+            'test':'./datasets/2019CoV/qnb.csv'
+        },
+        'xhsd':{
+            'test':'./datasets/2019CoV/xhsd.csv'
+        },
+        'dxy':{
+            'test':'./datasets/2019CoV/dxy.csv'
+        },
+        'cjrb':{
+            'test':'./datasets/2019CoV/cjrb.csv'
+        },
+        'ctdsb':{
+            'test':'./datasets/2019CoV/ctdsb.csv'
+        },
+        'gzrb':{
+            'test':'./datasets/2019CoV/gzrb.csv'
+        },
+        'jmxw':{
+            'test':'./datasets/2019CoV/jmxw.csv'
+        },
+        'nfdsb':{
+            'test':'./datasets/2019CoV/nfdsb.csv' 
+        },
+        'ppxw':{
+            'test':'./datasets/2019CoV/ppxw.csv'
+        },
+        'rw':{
+            'test':'./datasets/2019CoV/rw.csv'
+        },
+        'xjb':{
+            'test':'./datasets/2019CoV/xjb.csv'
+        },
+        'zgqng':{
+            'test':'./datasets/2019CoV/zgqng.csv'
+        } 
+    } 
     log_file = '{}-{}-{}.log'.format(opt.model_name, opt.dataset, strftime("%y%m%d-%H%M", localtime()))
     logger.addHandler(logging.FileHandler(log_file))
     opt.model_class = model_classes[opt.model_name]
@@ -126,44 +165,38 @@ def main():
         if opt.device is None else torch.device(opt.device)
     opt.data_file = dataset_files[opt.dataset]
     tokenizer = Tokenizer4Bert(opt.max_seq_len, opt.pretrained_bert_name)
-    testset = CovData(opt.dataset_file['test'], tokenizer)
+    testset = CovProcess(opt.dataset_file['test'], tokenizer)
     test_data_loader = DataLoader(testset, batch_size=opt.batch_size, shuffle=False)
     
     model_list = []
     for fold in range(opt.cross_fold):
-        model = ModelTrained(opt, './state_dict/{}{}_{}'.format(opt.model_path, fold, opt.model_name))
+        model = ModelTrained(opt, './state_dict/{}{}'.format(opt.model_path, fold))
         #model._reset_params
         model_list.append(model)
-
-    n_correct, n_total = 0, 0
-    targets_all, outputs_all = None, None
+    result = []
     with torch.no_grad():
         logger.info('>' * 100)
         for batch, sample_batched in enumerate(test_data_loader):
-            if batch % 100 == 0:
+            if batch % 20 == 0:
                 logger.info('batch: {}'.format(batch))
             inputs = [sample_batched[col].to(opt.device) for col in opt.inputs_cols]
-            targets = sample_batched['polarity'].to(opt.device)
+            time_list = sample_batched['time']
             result_list = []
             for model in model_list:
                 result_list.append(model.output(inputs))
                 
             outputs = sum(result_list)
-            n_correct += (torch.argmax(outputs, -1) == targets).sum().item()
-            n_total += len(outputs)
-            acc = n_correct / n_total
-            if batch % 10 == 0:
-                logger.info('acc: {:.4f}'.format(acc))
 
-            if targets_all is None:
-                targets_all = targets
-                outputs_all = outputs
-            else:
-                targets_all = torch.cat((targets_all, targets), dim=0)
-                outputs_all = torch.cat((outputs_all, outputs), dim=0)
-
-        acc = n_correct / n_total
-        f1 = metrics.f1_score(targets_all.cpu(), torch.argmax(outputs_all, -1).cpu(), labels=[0, 1, 2], average='macro')
-        logger.info('acc: {:.4f} f1: {:.4f}'.format(acc, f1))
+            output = torch.argmax(outputs, -1)
+            output_numpy = output.cpu().numpy()
+            output_list = output_numpy.tolist()
+            for tendency, time in zip(output_list, time_list):
+                result.append((tendency, time))
+        print(result)
+        pickle_path = './datasets/result/{}.pkl'.format(opt.dataset)
+        f = open(pickle_path, 'wb+')
+        pickle.dump(result, f)
+        f.close()
+        #logger.info('acc: {:.4f} f1: {:.4f}'.format(acc, f1))
 if __name__ == '__main__':
   main()

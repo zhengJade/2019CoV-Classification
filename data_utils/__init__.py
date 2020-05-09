@@ -4,4 +4,5 @@
 # Copyright (C) 2020. All Rights Reserved.
 
 from data_utils.cov_data_util import CovData
+from data_utils.cov_process_util import CovProcess
 from data_utils.data_util import ABSADataset, build_tokenizer, build_embedding_matrix, Tokenizer4Bert
